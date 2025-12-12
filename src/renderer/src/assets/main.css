@@ -1,0 +1,15 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-slate-950: #020617;
+  --color-slate-900: #0f172a;
+  --color-emerald-500: #10b981;
+  --color-teal-500: #14b8a6;
+  --color-amber-400: #fbbf24;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-950 text-slate-100 font-sans antialiased;
+  }
+}
