@@ -29,7 +29,7 @@ javaClient.interceptors.response.use(
 nestClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('Backend API Error:', error.response?.data || error.message);
+    console.error('Backend API Error:', error.response?.data || error.message || error);
     return Promise.reject(error);
   },
 );

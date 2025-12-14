@@ -26,8 +26,18 @@ export const javaCardService = {
   },
 
   registerCard: async (pin: string): Promise<RegisterCardResponse> => {
-    const response = await javaClient.post<RegisterCardResponse>('/register', { pin });
-    return response.data;
+    const response = await javaClient.post<{ result: string }>('/register', { pin });
+    const data = JSON.parse(response.data.result);
+
+    const finalResponse: RegisterCardResponse = {
+      cardId: data.cardId,
+      modulus: data.modulus,
+      exponent: data.exponent,
+      // PHÉP MÀU Ở ĐÂY: Gán modulus vào publicKey
+      publicKey: data.modulus,
+    };
+
+    return finalResponse;
   },
 
   updateCardInfo: async (data: UpdateInfoRequest): Promise<void> => {
