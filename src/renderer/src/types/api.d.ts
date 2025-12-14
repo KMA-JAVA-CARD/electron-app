@@ -9,10 +9,6 @@ export interface RegisterCardResponse {
   exponent: string;
 }
 
-export interface VerifyPinResponse {
-  result: string; // 'Success' | 'Locked' | 'Failed' | string
-}
-
 export interface CardIdResponse {
   result: string; // Hex string
 }
@@ -51,11 +47,35 @@ export interface RegisterMemberRequest {
   avatar?: File | null;
 }
 
-export interface MemberResponse {
-  id: string;
-  fullName: string;
+export interface MemberCardResponse {
+  id: number;
+  cardSerial: string;
+  publicKey: string;
   pointBalance: number;
-  status: 'Active' | 'Inactive' | 'Expired';
-  tier: 'Silver' | 'Gold' | 'Diamond';
-  // Add other fields as needed
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+  user: {
+    id: number;
+    fullName: string;
+    phone: string;
+    email: string | null;
+    address: string | null;
+    dob: Date | null;
+    avatar: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+}
+
+export interface VerifyPinResponse {
+  success: boolean;
+  message: string;
+  remainingTries: number; // -1 if not applicable, > 0 if retrying, 0 if locked
+  sw: string; // Status Word (e.g., "9000", "63C2", "6983")
+}
+
+export interface ChangePinRequest {
+  oldPin: string;
+  newPin: string;
 }

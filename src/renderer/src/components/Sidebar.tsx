@@ -31,7 +31,7 @@ export const Sidebar = () => {
   const location = useLocation();
 
   const navItems = [
-    { to: '/', icon: Home, label: 'Dashboard' },
+    { to: '/dashboard', icon: Home, label: 'Dashboard' },
     { to: '/pos', icon: ShoppingBag, label: 'POS' },
     { to: '/members', icon: Users, label: 'Members' },
     { to: '/transactions', icon: History, label: 'History' },

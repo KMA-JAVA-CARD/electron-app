@@ -26,18 +26,9 @@ export const javaCardService = {
   },
 
   registerCard: async (pin: string): Promise<RegisterCardResponse> => {
-    const response = await javaClient.post<{ result: string }>('/register', { pin });
-    const data = JSON.parse(response.data.result);
+    const response = await javaClient.post<RegisterCardResponse>('/register', { pin });
 
-    const finalResponse: RegisterCardResponse = {
-      cardId: data.cardId,
-      modulus: data.modulus,
-      exponent: data.exponent,
-      // PHÉP MÀU Ở ĐÂY: Gán modulus vào publicKey
-      publicKey: data.modulus,
-    };
-
-    return finalResponse;
+    return response.data;
   },
 
   updateCardInfo: async (data: UpdateInfoRequest): Promise<void> => {
@@ -51,6 +42,16 @@ export const javaCardService = {
 
   getSecureInfo: async (pin: string): Promise<SecureInfoResponse> => {
     const response = await javaClient.post<SecureInfoResponse>('/get-info-secure', { pin });
+    return response.data;
+  },
+
+  changePin: async (oldPin: string, newPin: string): Promise<VerifyPinResponse> => {
+    const response = await javaClient.post<VerifyPinResponse>('/change-pin', { oldPin, newPin });
+    return response.data;
+  },
+
+  unblockPin: async (): Promise<VerifyPinResponse> => {
+    const response = await javaClient.post<VerifyPinResponse>('/unblock-pin');
     return response.data;
   },
 };

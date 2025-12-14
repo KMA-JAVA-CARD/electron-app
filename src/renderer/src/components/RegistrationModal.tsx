@@ -135,7 +135,7 @@ export const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) =
 
       // Step A: Register Card
       setLoadingStep('Initializing Card (Generating Keys)...');
-      const { cardId, publicKey } = await javaCardService.registerCard(data.pin);
+      const { cardId, modulus: publicKey } = await javaCardService.registerCard(data.pin);
       console.log('Card ID:', cardId);
       console.log('Public Key:', publicKey);
       // Step B: Update Card Info
@@ -185,7 +185,7 @@ export const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) =
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className='absolute inset-0 bg-slate-950/80 backdrop-blur-sm'
-            onClick={handleClose}
+            // onClick={handleClose}
           />
 
           <motion.div

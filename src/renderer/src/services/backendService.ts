@@ -1,8 +1,8 @@
 import { nestClient } from '../lib/api';
-import { RegisterMemberRequest, MemberResponse } from '../types/api';
+import { RegisterMemberRequest, MemberCardResponse } from '../types/api';
 
 export const backendService = {
-  registerMember: async (data: RegisterMemberRequest): Promise<MemberResponse> => {
+  registerMember: async (data: RegisterMemberRequest): Promise<MemberCardResponse> => {
     const formData = new FormData();
 
     formData.append('cardSerial', data.cardSerial);
@@ -18,7 +18,7 @@ export const backendService = {
       formData.append('avatar', data.avatar, data.avatar.name);
     }
 
-    const response = await nestClient.post<MemberResponse>('/cards/register', formData, {
+    const response = await nestClient.post<MemberCardResponse>('/cards/register', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -27,8 +27,8 @@ export const backendService = {
     return response.data;
   },
 
-  getMemberInfo: async (cardSerial: string): Promise<MemberResponse> => {
-    const response = await nestClient.get<MemberResponse>(`/cards/${cardSerial}`);
+  getMemberInfo: async (cardSerial: string): Promise<MemberCardResponse> => {
+    const response = await nestClient.get<MemberCardResponse>(`/cards/${cardSerial}`);
     return response.data;
   },
 };
