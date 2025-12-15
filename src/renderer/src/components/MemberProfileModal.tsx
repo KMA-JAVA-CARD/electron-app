@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, User, Phone, MapPin, Calendar, CreditCard, Award } from 'lucide-react';
+import { X, User, Phone, MapPin, Calendar, Award } from 'lucide-react';
 import { MemberCardResponse, SecureInfoResponse } from '../types/api';
 
 interface MemberProfileModalProps {
@@ -15,6 +15,8 @@ export const MemberProfileModal = ({
   member,
   secureInfo,
 }: MemberProfileModalProps) => {
+  const avatarSrc = member?.user.avatarUrl ?? null;
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -43,8 +45,11 @@ export const MemberProfileModal = ({
               <div className='absolute -bottom-16 left-8 p-1 bg-slate-900 rounded-full'>
                 {/* Avatar Placeholder */}
                 <div className='w-32 h-32 bg-slate-800 rounded-full border-4 border-slate-900 overflow-hidden flex items-center justify-center'>
-                  <User className='w-16 h-16 text-slate-600' />
-                  {/* If implemented, could show real avatar here */}
+                  {avatarSrc ? (
+                    <img src={avatarSrc} alt='Avatar' className='w-full h-full object-cover' />
+                  ) : (
+                    <User className='w-16 h-16 text-slate-600' />
+                  )}
                 </div>
               </div>
             </div>

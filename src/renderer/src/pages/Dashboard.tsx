@@ -10,24 +10,34 @@ import {
   AlertOctagon,
   RefreshCw,
   CreditCard,
+  Ban, // Added Ban icon
 } from 'lucide-react';
 import clsx from 'clsx';
 import { javaCardService } from '../services/javaCardService';
 import { backendService } from '../services/backendService';
 import { PinInputModal } from '../components/PinInputModal';
 import { ChangePinModal } from '../components/ChangePinModal';
+import { MemberCardModal } from '../components/MemberCardModal';
 import { MemberProfileModal } from '../components/MemberProfileModal';
 import { MemberCardResponse, SecureInfoResponse } from '../types/api';
 
 export const Dashboard = () => {
+  // ... rest of component
   const [cardId, setCardId] = useState<string | null>(null);
   const [isEmptyCard, setIsEmptyCard] = useState(false);
+  const [isBlockedCard, setIsBlockedCard] = useState(false); // New State
   const [isReaderConnected, setIsReaderConnected] = useState(false);
   const [lastCheck, setLastCheck] = useState<Date>(new Date());
 
   // Modal States
   const [activeModal, setActiveModal] = useState<
-    'info-pin' | 'change-verify-old' | 'change-pin-new' | 'profile' | 'reset-confirm' | null
+    | 'info-pin'
+    | 'change-verify-old'
+    | 'change-pin-new'
+    | 'member-card'
+    | 'profile'
+    | 'reset-confirm'
+    | null
   >(null);
   const [modalError, setModalError] = useState<string | null>(null);
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
@@ -40,6 +50,7 @@ export const Dashboard = () => {
   // Data States
   const [memberData, setMemberData] = useState<MemberCardResponse | null>(null);
   const [secureInfo, setSecureInfo] = useState<SecureInfoResponse | null>(null);
+  const [cardImageHex, setCardImageHex] = useState<string | null>(null);
 
   // Debug Log
   console.log('secureInfo', secureInfo);
@@ -55,9 +66,17 @@ export const Dashboard = () => {
       // 2. Get Card ID
       try {
         const response = await javaCardService.getCardId();
-        const id = response.result;
+        let id = response.result;
 
         if (id) {
+          // Check for BLOCKED status
+          if (id.includes('.BLOCKED')) {
+            setIsBlockedCard(true);
+            id = id.replace('.BLOCKED', ''); // Strip suffix to get clean ID
+          } else {
+            setIsBlockedCard(false);
+          }
+
           if (/^0+$/.test(id)) {
             // Card exists but is empty/blank
             setIsEmptyCard(true);
@@ -70,16 +89,19 @@ export const Dashboard = () => {
         } else {
           setCardId(null);
           setIsEmptyCard(false);
+          setIsBlockedCard(false);
         }
       } catch (cardErr) {
         setCardId(null);
         setIsEmptyCard(false);
+        setIsBlockedCard(false);
       }
     } catch (error) {
       console.error('Reader check failed:', error);
       setIsReaderConnected(false);
       setCardId(null);
       setIsEmptyCard(false);
+      setIsBlockedCard(false);
     } finally {
       setLastCheck(new Date());
       setIsRefreshing(false);
@@ -93,28 +115,29 @@ export const Dashboard = () => {
 
   // -- Features --
 
-  // 1. Check Info (Pin Verification)
+  // 1. Check Info (Pin Verification) -> Show Card Visual
   const handleVerifyPinForInfo = async (pin: string) => {
     setIsLoading(true);
     setModalError(null);
     setRemainingAttempts(null);
+    setCardImageHex(null); // Reset previous image
     try {
       const verifyRes = await javaCardService.verifyPin(pin);
 
       if (verifyRes.sw === '9000' && verifyRes.success) {
-        const infoRes = await javaCardService.getSecureInfo(pin);
-        setSecureInfo(infoRes);
-
+        // Parallel Fetch: Secure Info + Card Image
         try {
-          if (cardId && !isEmptyCard) {
-            const memberRes = await backendService.getMemberInfo(cardId);
-            setMemberData(memberRes);
-          }
-        } catch (e) {
-          console.warn('Could not fetch backend member data', e);
+          const [infoRes, imageRes] = await Promise.all([
+            javaCardService.getSecureInfo(pin),
+            javaCardService.getCardImage(),
+          ]);
+          setSecureInfo(infoRes);
+          setCardImageHex(imageRes.result);
+        } catch (dataErr) {
+          console.warn('Failed to fetch card data/image', dataErr);
         }
 
-        setActiveModal('profile');
+        setActiveModal('member-card'); // Open Visual Card Modal First
       } else if (verifyRes.sw === '6983' || verifyRes.remainingTries === 0) {
         setModalError('Card is LOCKED! Please use Reset PIN.');
         setRemainingAttempts(0);
@@ -128,6 +151,25 @@ export const Dashboard = () => {
       setModalError(err.message || 'Error verifying PIN');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // 1b. View Full Details (triggered from MemberCardModal)
+  const handleViewDetails = async () => {
+    setIsLoading(true);
+    // Fetch backend info here
+    if (cardId && !isEmptyCard) {
+      try {
+        const memberRes = await backendService.getMemberInfo(cardId);
+        setMemberData(memberRes);
+        setActiveModal('profile');
+      } catch (e) {
+        console.warn('Could not fetch backend member data', e);
+        // Even if backend fails, show what we have
+        setActiveModal('profile');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -193,7 +235,9 @@ export const Dashboard = () => {
       if (res.sw === '9000') {
         setActiveModal(null);
         setRemainingAttempts(null);
+        setIsBlockedCard(false); // Optimistically clear blocked state
         alert('Card Unblocked. PIN reset to default (123456).');
+        refreshStatus(); // Re-check status to confirm
       } else {
         alert('Failed to reset PIN.');
       }
@@ -223,6 +267,15 @@ export const Dashboard = () => {
         onSubmit={handleChangePinSubmit}
         error={modalError}
         isLoading={isLoading}
+      />
+
+      <MemberCardModal
+        isOpen={activeModal === 'member-card'}
+        onClose={() => setActiveModal(null)}
+        onViewDetails={handleViewDetails}
+        secureInfo={secureInfo}
+        cardImageHex={cardImageHex}
+        cardId={cardId}
       />
 
       <MemberProfileModal
@@ -285,9 +338,11 @@ export const Dashboard = () => {
                 !isReaderConnected
                   ? 'bg-red-500/50'
                   : cardId
-                    ? isEmptyCard
-                      ? 'bg-amber-500 shadow-amber-500/50'
-                      : 'bg-emerald-500 shadow-emerald-500/50'
+                    ? isBlockedCard
+                      ? 'bg-red-600 shadow-red-600/50 animate-pulse'
+                      : isEmptyCard
+                        ? 'bg-amber-500 shadow-amber-500/50'
+                        : 'bg-emerald-500 shadow-emerald-500/50'
                     : 'bg-slate-500/50 animate-pulse',
               )}
             />
@@ -313,7 +368,7 @@ export const Dashboard = () => {
                   </p>
                 </motion.div>
               ) : cardId ? (
-                /* CONNECTED & CARD DETECTED (Valid or Empty) */
+                /* CONNECTED & CARD DETECTED (Valid, Empty, or BLOCKED) */
                 <motion.div
                   key='card-connected'
                   initial={{ scale: 0.8, opacity: 0 }}
@@ -324,13 +379,20 @@ export const Dashboard = () => {
                   <div
                     className={clsx(
                       'w-48 h-32 rounded-xl shadow-2xl mb-8 flex items-center justify-center border-t border-white/20 relative overflow-hidden',
-                      isEmptyCard
-                        ? 'bg-gradient-to-br from-amber-600 to-orange-700 shadow-amber-500/20'
-                        : 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/20',
+                      isBlockedCard
+                        ? 'bg-gradient-to-br from-red-600 to-rose-700 shadow-red-500/20'
+                        : isEmptyCard
+                          ? 'bg-gradient-to-br from-amber-600 to-orange-700 shadow-amber-500/20'
+                          : 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/20',
                     )}
                   >
                     <div className='absolute inset-0 bg-[url("https://www.transparenttextures.com/patterns/carbon-fibre.png")] opacity-20' />
-                    {isEmptyCard ? (
+                    {isBlockedCard ? (
+                      <div className='flex flex-col items-center text-red-100'>
+                        <Ban className='w-12 h-12 drop-shadow-md mb-1' />
+                        <span className='text-xs font-bold uppercase tracking-widest'>LOCKED</span>
+                      </div>
+                    ) : isEmptyCard ? (
                       <div className='flex flex-col items-center text-amber-100'>
                         <CreditCard className='w-12 h-12 drop-shadow-md mb-1 opacity-80' />
                         <span className='text-xs font-bold uppercase tracking-widest'>
@@ -345,16 +407,29 @@ export const Dashboard = () => {
                   <h2
                     className={clsx(
                       'text-2xl font-bold mb-2',
-                      isEmptyCard ? 'text-amber-400' : 'text-white',
+                      isBlockedCard
+                        ? 'text-red-500'
+                        : isEmptyCard
+                          ? 'text-amber-400'
+                          : 'text-white',
                     )}
                   >
-                    {isEmptyCard ? 'Empty Card Detected' : 'Card Detected'}
+                    {isBlockedCard
+                      ? 'Card Blocked'
+                      : isEmptyCard
+                        ? 'Empty Card Detected'
+                        : 'Card Detected'}
                   </h2>
                   <div className='bg-slate-950/50 px-4 py-2 rounded-lg border border-slate-800 font-mono text-slate-400 tracking-wider mb-4 text-sm'>
                     {cardId}
                   </div>
 
-                  {isEmptyCard ? (
+                  {isBlockedCard ? (
+                    <div className='flex items-center gap-2 text-sm text-red-500 font-medium bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20'>
+                      <Ban className='w-4 h-4' />
+                      Operations Restricted
+                    </div>
+                  ) : isEmptyCard ? (
                     <div className='flex items-center gap-2 text-sm text-amber-500 font-medium bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20'>
                       <ShieldAlert className='w-4 h-4' />
                       Not Initialized
@@ -410,7 +485,7 @@ export const Dashboard = () => {
           </div>
 
           <button
-            disabled={!isReaderConnected || !cardId || isEmptyCard} // Disable if empty card
+            disabled={!isReaderConnected || !cardId || isEmptyCard || isBlockedCard} // Disabled if Blocked
             onClick={() => {
               setActiveModal('info-pin');
               setModalError(null);
@@ -429,7 +504,7 @@ export const Dashboard = () => {
           </button>
 
           <button
-            disabled={!isReaderConnected || !cardId || isEmptyCard} // Disable if empty card
+            disabled={!isReaderConnected || !cardId || isEmptyCard || isBlockedCard} // Disabled if Blocked
             onClick={() => {
               setActiveModal('change-verify-old');
               setModalError(null);
@@ -448,7 +523,7 @@ export const Dashboard = () => {
           </button>
 
           <button
-            disabled={!isReaderConnected || !cardId || isEmptyCard} // Disable if empty card
+            disabled={!isReaderConnected || !cardId || isEmptyCard} // Enabled if Blocked (only checking cardId and emptyCard)
             onClick={() => setActiveModal('reset-confirm')}
             className='col-span-2 group bg-slate-800 hover:bg-red-900/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-800 p-8 rounded-3xl border border-slate-700 hover:border-red-500/50 flex flex-row items-center justify-start gap-8 transition-all hover:shadow-xl hover:shadow-red-500/5 focus:outline-none focus:ring-2 focus:ring-red-500/50'
           >

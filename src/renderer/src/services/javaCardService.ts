@@ -7,6 +7,7 @@ import {
   UpdateInfoRequest,
   UploadImageRequest,
   SecureInfoResponse,
+  GetImageHexResponse,
 } from '../types/api';
 
 export const javaCardService = {
@@ -40,9 +41,16 @@ export const javaCardService = {
     await javaClient.post('/upload-image', payload);
   },
 
-  getSecureInfo: async (pin: string): Promise<SecureInfoResponse> => {
-    const response = await javaClient.post<SecureInfoResponse>('/get-info-secure', { pin });
+  getCardImage: async (): Promise<GetImageHexResponse> => {
+    const response = await javaClient.get<GetImageHexResponse>('/read-image');
     return response.data;
+  },
+
+  getSecureInfo: async (pin: string): Promise<SecureInfoResponse> => {
+    const response = await javaClient.post<{ result: string }>('/get-info-secure', { pin });
+    // The result return is like "full_name|date_of_birth|address|phone"
+    const [fullName, dob, address, phone] = response.data.result.split('|');
+    return { fullName, dob, address, phone };
   },
 
   changePin: async (oldPin: string, newPin: string): Promise<VerifyPinResponse> => {

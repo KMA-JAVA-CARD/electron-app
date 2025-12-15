@@ -17,6 +17,10 @@ export interface UploadImageRequest {
   hexData: string;
 }
 
+export interface GetImageHexResponse {
+  result: string;
+}
+
 export interface UpdateInfoRequest {
   pin: string;
   fullName: string;
@@ -62,7 +66,7 @@ export interface MemberCardResponse {
     email: string | null;
     address: string | null;
     dob: Date | null;
-    avatar: string | null;
+    avatarUrl: string | null;
     createdAt: Date;
     updatedAt: Date;
   };

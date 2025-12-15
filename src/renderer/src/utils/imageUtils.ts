@@ -109,3 +109,61 @@ const convertToGrayscaleHex = (data: Uint8ClampedArray): string => {
 
   return hexString;
 };
+
+/**
+ * Convert Raw Grayscale Hex String back to Image Data URL (Base64)
+ * @param hexString - Chuỗi Hex đọc từ thẻ
+ * @param width - Chiều rộng ảnh (Default 64)
+ * @param height - Chiều cao ảnh (Default 64)
+ */
+export const hexToImageSrc = (hexString: string, width = 64, height = 64): string => {
+  try {
+    // 1. Validate độ dài
+    // Mỗi pixel = 1 byte = 2 ký tự hex
+    const expectedLength = width * height * 2;
+    if (hexString.length < expectedLength) {
+      console.warn(
+        `Image data incomplete. Expected ${expectedLength} chars, got ${hexString.length}. Padding with black.`,
+      );
+    }
+
+    // 2. Tạo Canvas ảo để vẽ lại
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) return '';
+
+    // 3. Tạo bộ đệm dữ liệu ảnh (RGBA)
+    // Mỗi pixel cần 4 bytes: R, G, B, Alpha
+    const imageData = ctx.createImageData(width, height);
+    const data = imageData.data;
+
+    // 4. Duyệt qua chuỗi Hex và điền màu vào Canvas
+    for (let i = 0; i < width * height; i++) {
+      // Lấy 2 ký tự hex tương ứng với 1 pixel
+      const hexVal = hexString.substr(i * 2, 2);
+      // Parse sang số thập phân (0-255)
+      let grayVal = parseInt(hexVal, 16);
+
+      if (isNaN(grayVal)) grayVal = 0; // Fallback màu đen nếu lỗi
+
+      // Gán giá trị vào mảng RGBA
+      const ptr = i * 4;
+      data[ptr] = grayVal; // Red
+      data[ptr + 1] = grayVal; // Green
+      data[ptr + 2] = grayVal; // Blue (R=G=B => Màu xám)
+      data[ptr + 3] = 255; // Alpha (Full độ đậm)
+    }
+
+    // 5. Đẩy dữ liệu vào canvas
+    ctx.putImageData(imageData, 0, 0);
+
+    // 6. Xuất ra dạng Base64 URL
+    return canvas.toDataURL('image/png');
+  } catch (e) {
+    console.error('Error converting hex to image:', e);
+    return ''; // Trả về rỗng hoặc ảnh placeholder nếu lỗi
+  }
+};
