@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ArrowRight, Wallet, User } from 'lucide-react';
+import { X, ArrowRight, User, Leaf } from 'lucide-react';
 import { SecureInfoResponse } from '../types/api';
 import { hexToImageSrc } from '../utils/imageUtils';
 import clsx from 'clsx';
@@ -74,7 +74,7 @@ export const MemberCardModal = ({
                 <div className='flex justify-between items-start'>
                   <div className='flex items-center gap-2'>
                     <div className='w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/20'>
-                      <Wallet className='w-5 h-5 text-white' />
+                      <Leaf className='w-5 h-5 text-white' />
                     </div>
                     <div>
                       <h3 className='font-bold text-lg leading-none tracking-tight text-white'>
@@ -119,14 +119,38 @@ export const MemberCardModal = ({
                     </div>
                   </div>
                   <div>
-                    <p className='text-xs text-slate-400 uppercase tracking-wider mb-1'>
-                      Member Name
+                    <p className='text-sm text-emerald-400 mb-2 font-mono'>
+                      {cardId ? cardId : '---- ---- ---- ----'}
                     </p>
-                    <h2 className='text-xl font-bold text-white tracking-wide truncate max-w-[200px]'>
-                      {secureInfo?.fullName || '---- ----'}
-                    </h2>
-                    <p className='text-xs text-emerald-400 mt-1 font-mono'>
-                      {cardId ? `****  ****  ****  ${cardId.slice(-4)}` : '****  ****  ****  ****'}
+                    <p className='text-xs text-slate-400 uppercase tracking-wider'>Member Name</p>
+                    <div className='flex items-end gap-2'>
+                      <h2 className='text-xl font-bold text-white tracking-wide truncate max-w-[200px]'>
+                        {secureInfo?.fullName || '---- ----'}
+                      </h2>
+                      <p className='text-sm text-yellow-400 font-mono'>
+                        {/* replace first char '0' with '+84' */}
+                        {secureInfo?.phone.startsWith('0')
+                          ? `+84${secureInfo?.phone.slice(1)}`
+                          : secureInfo?.phone || '---- ---- ---- ----'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Middle Second: Other information: address, date of birth */}
+                <div className='flex flex-col gap-1 mt-2'>
+                  <div className='flex items-center gap-5'>
+                    <p className='text-xs text-slate-400 uppercase w-20 whitespace-nowrap'>
+                      DATE OF BIRTH
+                    </p>
+                    <p className='text-sm font-mono text-slate-300'>
+                      {secureInfo?.dob || '--/--/----'}
+                    </p>
+                  </div>
+                  <div className='flex items-center gap-5'>
+                    <p className='text-xs text-slate-400 uppercase w-20'>ADDRESS</p>
+                    <p className='text-sm font-mono text-slate-300'>
+                      {secureInfo?.address || '---- ----'}
                     </p>
                   </div>
                 </div>

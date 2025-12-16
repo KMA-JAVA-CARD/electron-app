@@ -136,8 +136,7 @@ export const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) =
       // Step A: Register Card
       setLoadingStep('Initializing Card (Generating Keys)...');
       const { cardId, modulus: publicKey } = await javaCardService.registerCard(data.pin);
-      console.log('Card ID:', cardId);
-      console.log('Public Key:', publicKey);
+
       // Step B: Update Card Info
       setLoadingStep('Writing Personal Data to Card...');
       await javaCardService.updateCardInfo({

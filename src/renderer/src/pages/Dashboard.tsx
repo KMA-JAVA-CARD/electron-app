@@ -141,6 +141,7 @@ export const Dashboard = () => {
       } else if (verifyRes.sw === '6983' || verifyRes.remainingTries === 0) {
         setModalError('Card is LOCKED! Please use Reset PIN.');
         setRemainingAttempts(0);
+        refreshStatus();
       } else if (!verifyRes.success && verifyRes.sw?.startsWith('63c')) {
         setModalError(`Incorrect PIN.`);
         setRemainingAttempts(verifyRes.remainingTries);
@@ -227,19 +228,64 @@ export const Dashboard = () => {
     }
   };
 
-  // 3. Reset PIN
+  // 3. Reset PIN / Unblock Card
   const handleResetPin = async () => {
     setIsLoading(true);
     try {
+      // Step 1: Unblock the card (this will empty card data)
       const res = await javaCardService.unblockPin();
-      if (res.sw === '9000') {
-        setActiveModal(null);
-        setRemainingAttempts(null);
-        setIsBlockedCard(false); // Optimistically clear blocked state
-        alert('Card Unblocked. PIN reset to default (123456).');
-        refreshStatus(); // Re-check status to confirm
+
+      if (res.success && res.sw === '9000') {
+        // Step 2: Fetch member info from backend to restore card data
+        if (cardId && !isEmptyCard) {
+          try {
+            const memberInfo = await backendService.getMemberInfo(cardId);
+
+            // Step 3: The default PIN now is "123456"
+            const defaultPin = '123456';
+
+            // Format dob to yyyy-MM-dd if it exists
+            let dobFormatted = '';
+            if (memberInfo.user.dob) {
+              const dobDate = new Date(memberInfo.user.dob);
+              dobFormatted = dobDate.toISOString().split('T')[0]; // yyyy-MM-dd
+            }
+
+            await javaCardService.updateCardInfo({
+              pin: defaultPin,
+              fullName: memberInfo.user.fullName,
+              dob: dobFormatted,
+              address: memberInfo.user.address || '',
+              phone: memberInfo.user.phone,
+            });
+
+            setActiveModal(null);
+            setRemainingAttempts(null);
+            setIsBlockedCard(false);
+            alert(
+              'Card reset/unblocked successfully! Data restored from database. Default PIN: 123456',
+            );
+            refreshStatus();
+          } catch (restoreErr: any) {
+            console.error('Failed to restore card data:', restoreErr);
+            setActiveModal(null);
+            setIsBlockedCard(false);
+            alert(
+              'Card unblocked but failed to restore data: ' +
+                (restoreErr.message || 'Unknown error'),
+            );
+            refreshStatus();
+          }
+        } else {
+          // No backend data to restore
+          setActiveModal(null);
+          setRemainingAttempts(null);
+          setIsBlockedCard(false);
+          alert('Card unblocked. PIN reset to default (123456). No data to restore.');
+          refreshStatus();
+        }
       } else {
-        alert('Failed to reset PIN.');
+        alert('Failed to unblock card: ' + (res.message || 'Unknown error'));
       }
     } catch (err: any) {
       alert(err.message || 'Error executing Reset PIN');
