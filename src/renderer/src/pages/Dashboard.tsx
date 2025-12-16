@@ -29,8 +29,13 @@ export const Dashboard = () => {
   const [isReaderConnected, setIsReaderConnected] = useState(false);
   const [lastCheck, setLastCheck] = useState<Date>(new Date());
 
+  // Authentication State
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authenticatedPin, setAuthenticatedPin] = useState<string | null>(null);
+
   // Modal States
   const [activeModal, setActiveModal] = useState<
+    | 'auth-pin'
     | 'info-pin'
     | 'change-verify-old'
     | 'change-pin-new'
@@ -113,35 +118,89 @@ export const Dashboard = () => {
     refreshStatus();
   }, [refreshStatus]);
 
+  // Auto-open PIN Modal when valid card is detected
+  useEffect(() => {
+    if (cardId && !isEmptyCard && !isBlockedCard && !isAuthenticated) {
+      setActiveModal('auth-pin');
+      setModalError(null);
+      setRemainingAttempts(null);
+    }
+  }, [cardId, isEmptyCard, isBlockedCard, isAuthenticated]);
+
+  // Clear authentication when card changes or is removed
+  useEffect(() => {
+    setIsAuthenticated(false);
+    setAuthenticatedPin(null);
+  }, [cardId]);
+
   // -- Features --
 
-  // 1. Check Info (Pin Verification) -> Show Card Visual
-  const handleVerifyPinForInfo = async (pin: string) => {
+  // RSA Challenge-Response Verification
+  // This function executes the 3-step challenge verification process
+  // MUST be called immediately after successful PIN verification while card is in authenticated state
+  const verifyCardChallenge = async (): Promise<boolean> => {
+    if (!cardId) {
+      console.error('Cannot verify challenge: No card ID');
+      return false;
+    }
+
+    try {
+      // Step 2: Fetch Challenge from Backend
+      const challengeRes = await backendService.getChallenge();
+      const challenge = challengeRes.challenge;
+
+      // Step 3: Sign Challenge with Card (uses authenticated state from PIN verification)
+      const signatureRes = await javaCardService.signChallenge(challenge);
+      const signature = signatureRes.result;
+
+      // Step 4: Verify Signature on Backend
+      const verifyRes = await backendService.verifyChallenge({
+        cardSerial: cardId,
+        challenge,
+        signature,
+      });
+
+      if (!verifyRes.success) {
+        console.error('Challenge verification failed:', verifyRes.message);
+        return false;
+      }
+
+      return true;
+    } catch (err: any) {
+      console.error('Error during challenge verification:', err);
+      return false;
+    }
+  };
+
+  // 0. Initial Authentication (Auto-triggered on card detection)
+  const handleAuthenticatePin = async (pin: string) => {
     setIsLoading(true);
     setModalError(null);
     setRemainingAttempts(null);
-    setCardImageHex(null); // Reset previous image
     try {
+      // Step 1: Verify PIN (sets card to authenticated state)
       const verifyRes = await javaCardService.verifyPin(pin);
 
       if (verifyRes.sw === '9000' && verifyRes.success) {
-        // Parallel Fetch: Secure Info + Card Image
-        try {
-          const [infoRes, imageRes] = await Promise.all([
-            javaCardService.getSecureInfo(pin),
-            javaCardService.getCardImage(),
-          ]);
-          setSecureInfo(infoRes);
-          setCardImageHex(imageRes.result);
-        } catch (dataErr) {
-          console.warn('Failed to fetch card data/image', dataErr);
+        // PIN verification successful - card is now in authenticated state
+        // Immediately execute RSA challenge verification
+        const challengeVerified = await verifyCardChallenge();
+
+        if (!challengeVerified) {
+          setModalError('Security verification failed. Please try again.');
+          setIsAuthenticated(false);
+          return;
         }
 
-        setActiveModal('member-card'); // Open Visual Card Modal First
+        // Both PIN and challenge verification successful
+        setIsAuthenticated(true);
+        setAuthenticatedPin(pin);
+        setActiveModal(null);
       } else if (verifyRes.sw === '6983' || verifyRes.remainingTries === 0) {
         setModalError('Card is LOCKED! Please use Reset PIN.');
         setRemainingAttempts(0);
-        refreshStatus();
+        setIsBlockedCard(true);
+        setIsAuthenticated(false);
       } else if (!verifyRes.success && verifyRes.sw?.startsWith('63c')) {
         setModalError(`Incorrect PIN.`);
         setRemainingAttempts(verifyRes.remainingTries);
@@ -150,6 +209,34 @@ export const Dashboard = () => {
       }
     } catch (err: any) {
       setModalError(err.message || 'Error verifying PIN');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 1. Check Info (No PIN required - uses authenticated PIN)
+  const handleCheckInfo = async () => {
+    if (!authenticatedPin) {
+      alert('Session expired. Please re-authenticate.');
+      setIsAuthenticated(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setCardImageHex(null);
+    try {
+      // Parallel Fetch: Secure Info + Card Image
+      const [infoRes, imageRes] = await Promise.all([
+        javaCardService.getSecureInfo(authenticatedPin),
+        javaCardService.getCardImage(),
+      ]);
+      setSecureInfo(infoRes);
+      setCardImageHex(imageRes.result);
+
+      setActiveModal('member-card');
+    } catch (err: any) {
+      console.error('Failed to fetch card info:', err);
+      alert(err.message || 'Error fetching card information');
     } finally {
       setIsLoading(false);
     }
@@ -180,10 +267,19 @@ export const Dashboard = () => {
     setModalError(null);
     setRemainingAttempts(null);
     try {
+      // Step 1: Verify PIN (sets card to authenticated state)
       const verifyRes = await javaCardService.verifyPin(pin);
 
       if (verifyRes.sw === '9000' && verifyRes.success) {
-        // Success: Move to Step 2
+        // PIN verification successful - execute RSA challenge verification
+        const challengeVerified = await verifyCardChallenge();
+
+        if (!challengeVerified) {
+          setModalError('Security verification failed. Please try again.');
+          return;
+        }
+
+        // Both PIN and challenge verification successful - proceed to new PIN input
         setTempOldPin(pin);
         setActiveModal('change-pin-new');
       } else if (verifyRes.sw === '6983' || verifyRes.remainingTries === 0) {
@@ -296,12 +392,14 @@ export const Dashboard = () => {
 
   return (
     <div className='flex h-full gap-6 p-6'>
-      {/* Reusable Pin Input Modal - Used for Info & Change PIN Step 1 */}
+      {/* Authentication/PIN Input Modal - Used for initial auth & Change PIN verification */}
       <PinInputModal
-        isOpen={activeModal === 'info-pin' || activeModal === 'change-verify-old'}
+        isOpen={activeModal === 'auth-pin' || activeModal === 'change-verify-old'}
         onClose={() => setActiveModal(null)}
-        onSubmit={activeModal === 'change-verify-old' ? handleVerifyOldPin : handleVerifyPinForInfo}
-        title={activeModal === 'change-verify-old' ? 'Enter Current PIN' : 'Enter PIN to View Info'}
+        onSubmit={activeModal === 'change-verify-old' ? handleVerifyOldPin : handleAuthenticatePin}
+        title={
+          activeModal === 'change-verify-old' ? 'Enter Current PIN' : 'Enter PIN to Authenticate'
+        }
         error={modalError}
         isLoading={isLoading}
         remainingAttempts={remainingAttempts}
@@ -509,7 +607,15 @@ export const Dashboard = () => {
 
             {/* Manual Refresh Button */}
             <button
-              onClick={refreshStatus}
+              onClick={async () => {
+                await refreshStatus();
+                // After refresh, if valid card detected but not authenticated, open PIN modal
+                if (cardId && !isEmptyCard && !isBlockedCard && !isAuthenticated) {
+                  setActiveModal('auth-pin');
+                  setModalError(null);
+                  setRemainingAttempts(null);
+                }
+              }}
               disabled={isRefreshing}
               className='mt-6 px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition border border-slate-700 flex items-center gap-2 disabled:opacity-50'
             >
@@ -531,11 +637,8 @@ export const Dashboard = () => {
           </div>
 
           <button
-            disabled={!isReaderConnected || !cardId || isEmptyCard || isBlockedCard} // Disabled if Blocked
-            onClick={() => {
-              setActiveModal('info-pin');
-              setModalError(null);
-            }}
+            disabled={!isAuthenticated || isBlockedCard}
+            onClick={handleCheckInfo}
             className='group bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-800 p-8 rounded-3xl border border-slate-700 flex flex-col items-center justify-center gap-4 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-emerald-500/5 focus:outline-none focus:ring-2 focus:ring-emerald-500/50'
           >
             <div className='w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center group-hover:bg-emerald-500 transition-colors duration-300'>
@@ -550,7 +653,7 @@ export const Dashboard = () => {
           </button>
 
           <button
-            disabled={!isReaderConnected || !cardId || isEmptyCard || isBlockedCard} // Disabled if Blocked
+            disabled={!isAuthenticated || isBlockedCard}
             onClick={() => {
               setActiveModal('change-verify-old');
               setModalError(null);

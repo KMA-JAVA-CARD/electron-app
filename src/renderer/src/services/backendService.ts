@@ -1,5 +1,11 @@
 import { nestClient } from '../lib/api';
-import { RegisterMemberRequest, MemberCardResponse } from '../types/api';
+import {
+  RegisterMemberRequest,
+  MemberCardResponse,
+  GetChallengeResponse,
+  VerifyChallengeRequest,
+  VerifyChallengeResponse,
+} from '../types/api';
 
 export const backendService = {
   registerMember: async (data: RegisterMemberRequest): Promise<MemberCardResponse> => {
@@ -29,6 +35,17 @@ export const backendService = {
 
   getMemberInfo: async (cardSerial: string): Promise<MemberCardResponse> => {
     const response = await nestClient.get<MemberCardResponse>(`/cards/${cardSerial}`);
+    return response.data;
+  },
+
+  // RSA signing challenge verify
+  getChallenge: async (): Promise<GetChallengeResponse> => {
+    const response = await nestClient.get<GetChallengeResponse>('/cards/auth/challenge');
+    return response.data;
+  },
+
+  verifyChallenge: async (data: VerifyChallengeRequest): Promise<VerifyChallengeResponse> => {
+    const response = await nestClient.post<VerifyChallengeResponse>('/cards/auth/verify', data);
     return response.data;
   },
 };

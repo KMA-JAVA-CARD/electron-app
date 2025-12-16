@@ -7,3 +7,5 @@ out
 
 .agent/
 .shared/
+
+/prompt.md

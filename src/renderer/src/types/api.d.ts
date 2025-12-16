@@ -83,3 +83,19 @@ export interface ChangePinRequest {
   oldPin: string;
   newPin: string;
 }
+
+// RSA signing challenge verify
+export interface GetChallengeResponse {
+  challenge: string;
+}
+
+export interface VerifyChallengeRequest {
+  cardSerial: string;
+  challenge: string;
+  signature: string;
+}
+
+export interface VerifyChallengeResponse {
+  success: boolean;
+  message: string;
+}

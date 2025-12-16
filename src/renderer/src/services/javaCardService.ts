@@ -62,4 +62,9 @@ export const javaCardService = {
     const response = await javaClient.post<VerifyPinResponse>('/unblock-pin');
     return response.data;
   },
+
+  signChallenge: async (challenge: string): Promise<{ result: string }> => {
+    const response = await javaClient.post<{ result: string }>('/sign-challenge', { challenge });
+    return response.data;
+  },
 };
