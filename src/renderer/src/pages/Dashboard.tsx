@@ -10,7 +10,8 @@ import {
   AlertOctagon,
   RefreshCw,
   CreditCard,
-  Ban, // Added Ban icon
+  Ban,
+  User,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { javaCardService } from '../services/javaCardService';
@@ -19,6 +20,7 @@ import { PinInputModal } from '../components/PinInputModal';
 import { ChangePinModal } from '../components/ChangePinModal';
 import { MemberCardModal } from '../components/MemberCardModal';
 import { MemberProfileModal } from '../components/MemberProfileModal';
+import { UpdateUserInfoModal } from '../components/UpdateUserInfoModal';
 import { MemberCardResponse, SecureInfoResponse } from '../types/api';
 
 export const Dashboard = () => {
@@ -41,6 +43,7 @@ export const Dashboard = () => {
     | 'change-pin-new'
     | 'member-card'
     | 'profile'
+    | 'update-info'
     | 'reset-confirm'
     | null
   >(null);
@@ -429,6 +432,20 @@ export const Dashboard = () => {
         secureInfo={secureInfo}
       />
 
+      <UpdateUserInfoModal
+        isOpen={activeModal === 'update-info'}
+        onClose={() => setActiveModal(null)}
+        cardId={cardId}
+        currentUserData={memberData}
+        onUpdateSuccess={() => {
+          setActiveModal(null);
+          // Refresh member data after update
+          if (cardId && !isEmptyCard) {
+            backendService.getMemberInfo(cardId).then(setMemberData).catch(console.error);
+          }
+        }}
+      />
+
       <AnimatePresence>
         {activeModal === 'reset-confirm' && (
           <div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm'>
@@ -672,20 +689,34 @@ export const Dashboard = () => {
           </button>
 
           <button
+            disabled={!isAuthenticated || isBlockedCard}
+            onClick={() => setActiveModal('update-info')}
+            className='group bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-800 p-8 rounded-3xl border border-slate-700 flex flex-col items-center justify-center gap-4 transition-all hover:scale-[1.02] hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50'
+          >
+            <div className='w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center group-hover:bg-purple-500 transition-colors duration-300'>
+              <User className='w-8 h-8 text-purple-500 group-hover:text-white transition-colors' />
+            </div>
+            <div className='text-center'>
+              <h3 className='text-xl font-bold text-slate-100 mb-1 group-hover:text-purple-400 transition-colors'>
+                Update Info
+              </h3>
+              <p className='text-sm text-slate-500'>Edit profile & card data</p>
+            </div>
+          </button>
+
+          <button
             disabled={!isReaderConnected || !cardId || isEmptyCard} // Enabled if Blocked (only checking cardId and emptyCard)
             onClick={() => setActiveModal('reset-confirm')}
-            className='col-span-2 group bg-slate-800 hover:bg-red-900/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-800 p-8 rounded-3xl border border-slate-700 hover:border-red-500/50 flex flex-row items-center justify-start gap-8 transition-all hover:shadow-xl hover:shadow-red-500/5 focus:outline-none focus:ring-2 focus:ring-red-500/50'
+            className='group bg-slate-800 hover:bg-red-900/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-800 p-8 rounded-3xl border border-slate-700 hover:border-red-500/50 flex flex-col items-center justify-center gap-4 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-red-500/5 focus:outline-none focus:ring-2 focus:ring-red-500/50'
           >
-            <div className='w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center group-hover:bg-red-500 transition-colors duration-300 ml-4'>
+            <div className='w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center group-hover:bg-red-500 transition-colors duration-300'>
               <ShieldAlert className='w-8 h-8 text-red-500 group-hover:text-white transition-colors' />
             </div>
-            <div className='text-left'>
+            <div className='text-center'>
               <h3 className='text-xl font-bold text-slate-100 mb-1 group-hover:text-red-400 transition-colors'>
-                Reset PIN / Unblock
+                Reset PIN
               </h3>
-              <p className='text-sm text-slate-500'>
-                Admin unlock for frozen cards. Resets to default PIN.
-              </p>
+              <p className='text-sm text-slate-500'>Unblock frozen cards</p>
             </div>
           </button>
         </div>

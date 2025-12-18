@@ -51,6 +51,15 @@ export interface RegisterMemberRequest {
   avatar?: File | null;
 }
 
+export interface UpdateMemberRequest {
+  fullName?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  dob?: string;
+  avatar?: File | null;
+}
+
 export interface MemberCardResponse {
   id: number;
   cardSerial: string;

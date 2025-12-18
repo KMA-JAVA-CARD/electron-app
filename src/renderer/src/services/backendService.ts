@@ -5,6 +5,7 @@ import {
   GetChallengeResponse,
   VerifyChallengeRequest,
   VerifyChallengeResponse,
+  UpdateMemberRequest,
 } from '../types/api';
 
 export const backendService = {
@@ -36,6 +37,28 @@ export const backendService = {
   getMemberInfo: async (cardSerial: string): Promise<MemberCardResponse> => {
     const response = await nestClient.get<MemberCardResponse>(`/cards/${cardSerial}`);
     return response.data;
+  },
+
+  updateUserInfo: async (cardSerial: string, data: UpdateMemberRequest): Promise<void> => {
+    const formData = new FormData();
+
+    // Append fields from UpdateMemberRequest
+    if (data.fullName) formData.append('fullName', data.fullName);
+    if (data.phone) formData.append('phone', data.phone);
+    if (data.dob) formData.append('dob', data.dob);
+    if (data.address) formData.append('address', data.address);
+    if (data.email) formData.append('email', data.email);
+
+    // Handle avatar file if present
+    if (data.avatar) {
+      formData.append('avatar', data.avatar, data.avatar.name);
+    }
+
+    await nestClient.patch(`/cards/${cardSerial}/user`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
   },
 
   // RSA signing challenge verify
