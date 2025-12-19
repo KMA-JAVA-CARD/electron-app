@@ -567,7 +567,7 @@ export const CheckoutProcessModal = ({
         type,
         amount,
         timestamp,
-        description: `${timestamp} ${type === TransactionType.EARN ? 'Payment' : 'Redemption'} ${cartTotal} | ${cart.map((item, index) => `${index + 1}. ${item.name}`).join(', ')}`,
+        description: `${timestamp} ${type === TransactionType.EARN ? 'Payment' : 'Redemption'} ${cartTotal} | ${cart.map((item, index) => `${index + 1}. ${item.name}${item.quantity > 1 ? ` x ${item.quantity}` : ''}`).join(', ')}`,
         signature: signatureRes.result,
       });
 
