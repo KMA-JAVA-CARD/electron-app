@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Plus, Minus, Trash2, CreditCard } from 'lucide-react';
+import { Search, Plus, Trash2, CreditCard, Minus } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import clsx from 'clsx';
-import { CardReaderModal } from '../components/CardReaderModal';
+import { CheckoutProcessModal } from '../components/CheckoutProcessModal';
 
 // Mock Data
 const PRODUCTS = [
@@ -11,42 +11,42 @@ const PRODUCTS = [
     id: '1',
     name: 'Yoga Class Drop-in',
     category: 'Training',
-    price: 25,
+    price: 250000,
     image: 'https://www.myfooddiary.com/blog/asset/2868/yoga_class_2x.jpg',
   },
   {
     id: '2',
     name: 'Personal Training (1h)',
     category: 'Training',
-    price: 80,
+    price: 800000,
     image: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&q=80',
   },
   {
     id: '3',
     name: 'Deep Tissue Massage',
     category: 'Spa',
-    price: 120,
+    price: 1200000,
     image: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&q=80',
   },
   {
     id: '4',
     name: 'Aromatherapy Session',
     category: 'Spa',
-    price: 95,
+    price: 950000,
     image: 'https://images.unsplash.com/photo-1515377905703-c4788e51af15?w=400&q=80',
   },
   {
     id: '5',
     name: 'Green Detox Smoothie',
     category: 'F&B',
-    price: 12,
+    price: 120000,
     image: 'https://images.unsplash.com/photo-1610970881699-44a5587cabec?w=400&q=80',
   },
   {
     id: '6',
     name: 'Protein Shake',
     category: 'F&B',
-    price: 8,
+    price: 80000,
     image: 'https://images.unsplash.com/photo-1579722822174-a7900b79fdb4?w=400&q=80',
   },
 ];
@@ -56,15 +56,19 @@ const CATEGORIES = ['All', 'Training', 'Spa', 'F&B'];
 export const POSPage = () => {
   const [activeCategory, setActiveCategory] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { cart, addToCart, clearCart } = useStore();
+  const { cart, addToCart, increaseQuantity, decreaseQuantity, removeFromCart, clearCart } =
+    useStore();
 
   const filteredProducts =
     activeCategory === 'All' ? PRODUCTS : PRODUCTS.filter((p) => p.category === activeCategory);
 
-  const subtotal = cart.reduce((sum, item) => sum + item.price, 0);
+  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const tax = subtotal * 0.1;
   const total = subtotal + tax;
-  const points = Math.floor(total); // 1 point per $1
+
+  const handleCheckoutSuccess = () => {
+    clearCart();
+  };
 
   return (
     <div className='flex h-full'>
@@ -116,7 +120,7 @@ export const POSPage = () => {
                 'bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden group hover:border-emerald-500/30 transition-all cursor-pointer flex flex-col',
                 filteredProducts.length <= 4 && 'max-h-1/2',
               )}
-              onClick={() => addToCart({ ...product, id: Date.now().toString() })} // Simple unique ID
+              onClick={() => addToCart(product)}
             >
               <div className='h-3/4 bg-slate-800 relative overflow-hidden'>
                 <img
@@ -135,7 +139,9 @@ export const POSPage = () => {
                 </span>
                 <h3 className='font-semibold text-slate-100 leading-tight mb-2'>{product.name}</h3>
                 <div className='mt-auto flex justify-between items-end'>
-                  <span className='text-lg font-bold text-white'>${product.price}</span>
+                  <span className='text-lg font-bold text-white'>
+                    {product.price.toLocaleString()} ₫
+                  </span>
                 </div>
               </div>
             </motion.div>
@@ -161,19 +167,50 @@ export const POSPage = () => {
               <p>Cart is empty</p>
             </div>
           ) : (
-            cart.map((item, idx) => (
+            cart.map((item) => (
               <div
-                key={idx}
-                className='flex gap-3 items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800/50'
+                key={item.id}
+                className='flex gap-3 items-start bg-slate-950/50 p-3 rounded-xl border border-slate-800/50'
               >
                 <img src={item.image} className='w-12 h-12 rounded-lg object-cover bg-slate-800' />
                 <div className='flex-1 min-w-0'>
                   <h4 className='text-sm font-medium truncate'>{item.name}</h4>
-                  <p className='text-emerald-400 font-semibold text-sm'>${item.price}</p>
+                  <p className='text-emerald-400 font-semibold text-sm'>
+                    {item.price.toLocaleString()} ₫
+                  </p>
+                  {item.quantity > 1 && (
+                    <p className='text-xs text-slate-500'>
+                      {item.quantity} × {item.price.toLocaleString()} ₫
+                    </p>
+                  )}
                 </div>
-                <button className='p-1 hover:bg-red-500/10 hover:text-red-500 rounded-lg text-slate-500 transition-colors'>
-                  <Trash2 className='w-4 h-4' />
-                </button>
+                <div className='flex flex-col gap-2'>
+                  {/* Quantity Controls */}
+                  <div className='flex items-center gap-1 bg-slate-900 rounded-lg border border-slate-700'>
+                    <button
+                      onClick={() => decreaseQuantity(item.id)}
+                      className='p-1 hover:bg-slate-800 rounded-l-lg text-slate-400 hover:text-white transition-colors'
+                    >
+                      <Minus className='w-3 h-3' />
+                    </button>
+                    <span className='px-2 text-xs font-medium text-slate-300 min-w-[20px] text-center'>
+                      {item.quantity}
+                    </span>
+                    <button
+                      onClick={() => increaseQuantity(item.id)}
+                      className='p-1 hover:bg-slate-800 rounded-r-lg text-slate-400 hover:text-white transition-colors'
+                    >
+                      <Plus className='w-3 h-3' />
+                    </button>
+                  </div>
+                  {/* Remove Button */}
+                  <button
+                    onClick={() => removeFromCart(item.id)}
+                    className='p-1 hover:bg-red-500/10 hover:text-red-500 rounded-lg text-slate-500 transition-colors self-center'
+                  >
+                    <Trash2 className='w-3 h-3' />
+                  </button>
+                </div>
               </div>
             ))
           )}
@@ -183,19 +220,15 @@ export const POSPage = () => {
           <div className='space-y-2 text-sm'>
             <div className='flex justify-between text-slate-400'>
               <span>Subtotal</span>
-              <span>${subtotal.toFixed(2)}</span>
+              <span>{subtotal.toLocaleString()} ₫</span>
             </div>
             <div className='flex justify-between text-slate-400'>
               <span>Tax (10%)</span>
-              <span>${tax.toFixed(2)}</span>
+              <span>{tax.toLocaleString()} ₫</span>
             </div>
             <div className='flex justify-between text-lg font-bold text-white pt-2 border-t border-slate-800'>
               <span>Total</span>
-              <span>${total.toFixed(2)}</span>
-            </div>
-            <div className='flex justify-between text-amber-400 text-xs font-medium'>
-              <span>Points to earn</span>
-              <span>+{points} pts</span>
+              <span>{total.toLocaleString()} ₫</span>
             </div>
           </div>
 
@@ -209,11 +242,11 @@ export const POSPage = () => {
         </div>
       </div>
 
-      <CardReaderModal
+      <CheckoutProcessModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        total={total}
-        points={points}
+        cartTotal={total}
+        onSuccess={handleCheckoutSuccess}
       />
     </div>
   );

@@ -1,3 +1,5 @@
+import { TransactionType } from '@renderer/constants/enums';
+
 export interface ConnectResponse {
   result: string;
 }
@@ -35,6 +37,7 @@ export interface SecureInfoResponse {
   dob: string;
   address: string;
   phone: string;
+  points: number;
   // Add other fields as returned by the middleware
 }
 
@@ -107,4 +110,19 @@ export interface VerifyChallengeRequest {
 export interface VerifyChallengeResponse {
   success: boolean;
   message: string;
+}
+
+export interface TransactionRequest {
+  type: TransactionType;
+  amount: number;
+  timestamp: string; // Datetime milliseconds
+  description: string;
+  signature: string;
+}
+
+export interface TransactionResponse {
+  success: boolean;
+  newBalance: number;
+  transactionId: string;
+  pointChange: number;
 }

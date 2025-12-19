@@ -9,6 +9,7 @@ interface ChangePinModalProps {
   onSubmit: (newPin: string) => void;
   error?: string | null;
   isLoading?: boolean;
+  oldPin?: string | null; // Add old PIN for comparison
 }
 
 export const ChangePinModal = ({
@@ -17,6 +18,7 @@ export const ChangePinModal = ({
   onSubmit,
   error,
   isLoading,
+  oldPin,
 }: ChangePinModalProps) => {
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -41,6 +43,12 @@ export const ChangePinModal = ({
 
     if (newPin !== confirmPin) {
       setLocalError('New PINs do not match');
+      return;
+    }
+
+    // Check if new PIN is same as old PIN
+    if (oldPin && newPin === oldPin) {
+      setLocalError('New PIN must be different from the current PIN');
       return;
     }
 

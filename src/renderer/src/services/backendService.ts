@@ -6,6 +6,8 @@ import {
   VerifyChallengeRequest,
   VerifyChallengeResponse,
   UpdateMemberRequest,
+  TransactionRequest,
+  TransactionResponse,
 } from '../types/api';
 
 export const backendService = {
@@ -69,6 +71,17 @@ export const backendService = {
 
   verifyChallenge: async (data: VerifyChallengeRequest): Promise<VerifyChallengeResponse> => {
     const response = await nestClient.post<VerifyChallengeResponse>('/cards/auth/verify', data);
+    return response.data;
+  },
+
+  processTransaction: async (
+    cardSerial: string,
+    data: TransactionRequest,
+  ): Promise<TransactionResponse> => {
+    const response = await nestClient.post<TransactionResponse>(
+      `/cards/${cardSerial}/transaction`,
+      data,
+    );
     return response.data;
   },
 };

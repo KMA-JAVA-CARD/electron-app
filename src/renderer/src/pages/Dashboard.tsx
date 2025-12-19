@@ -414,6 +414,7 @@ export const Dashboard = () => {
         onSubmit={handleChangePinSubmit}
         error={modalError}
         isLoading={isLoading}
+        oldPin={tempOldPin}
       />
 
       <MemberCardModal

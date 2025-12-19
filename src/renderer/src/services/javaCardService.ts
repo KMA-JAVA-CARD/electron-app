@@ -49,8 +49,8 @@ export const javaCardService = {
   getSecureInfo: async (pin: string): Promise<SecureInfoResponse> => {
     const response = await javaClient.post<{ result: string }>('/get-info-secure', { pin });
     // The result return is like "full_name|date_of_birth|address|phone"
-    const [fullName, dob, address, phone] = response.data.result.split('|');
-    return { fullName, dob, address, phone };
+    const [fullName, dob, address, phone, points] = response.data.result.split('|');
+    return { fullName, dob, address, phone, points: Number(points) };
   },
 
   changePin: async (oldPin: string, newPin: string): Promise<VerifyPinResponse> => {
@@ -65,6 +65,11 @@ export const javaCardService = {
 
   signChallenge: async (challenge: string): Promise<{ result: string }> => {
     const response = await javaClient.post<{ result: string }>('/sign-challenge', { challenge });
+    return response.data;
+  },
+
+  updatePoints: async (points: number): Promise<{ result: string }> => {
+    const response = await javaClient.post<{ result: string }>('/update-points', { points });
     return response.data;
   },
 };

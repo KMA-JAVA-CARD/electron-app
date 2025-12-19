@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -55,6 +55,7 @@ export const UpdateUserInfoModal = ({
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isFetchingData, setIsFetchingData] = useState(false);
 
   // PIN verification states
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
@@ -71,15 +72,40 @@ export const UpdateUserInfoModal = ({
   } = useForm<UpdateUserFormData>({
     resolver: zodResolver(updateUserSchema),
     defaultValues: {
-      fullName: currentUserData?.user.fullName || '',
-      email: currentUserData?.user.email || '',
-      phone: currentUserData?.user.phone || '',
-      address: currentUserData?.user.address || '',
-      dob: currentUserData?.user.dob
-        ? new Date(currentUserData.user.dob).toISOString().split('T')[0]
-        : '',
+      fullName: '',
+      email: '',
+      phone: '',
+      address: '',
+      dob: '',
     },
   });
+
+  // Fetch current user data when modal opens
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (isOpen && cardId) {
+        setIsFetchingData(true);
+        setGlobalError(null);
+        try {
+          const userData = await backendService.getMemberInfo(cardId);
+          reset({
+            fullName: userData.user.fullName || '',
+            email: userData.user.email || '',
+            phone: userData.user.phone || '',
+            address: userData.user.address || '',
+            dob: userData.user.dob ? new Date(userData.user.dob).toISOString().split('T')[0] : '',
+          });
+        } catch (err: any) {
+          console.error('Failed to fetch user data:', err);
+          setGlobalError('Failed to load user data. Please try again.');
+        } finally {
+          setIsFetchingData(false);
+        }
+      }
+    };
+
+    fetchUserData();
+  }, [isOpen, cardId, reset]);
 
   const handleClose = () => {
     if (isSubmitting || isPinVerifying) return;
@@ -269,6 +295,14 @@ export const UpdateUserInfoModal = ({
 
               {/* Form Content */}
               <form onSubmit={handleSubmit(onSubmit)} className='p-6 space-y-6'>
+                {/* Loading State */}
+                {isFetchingData && (
+                  <div className='bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-center gap-3'>
+                    <Loader2 className='w-5 h-5 text-blue-500 animate-spin' />
+                    <p className='text-sm text-blue-400'>Loading user data...</p>
+                  </div>
+                )}
+
                 {/* Global Error */}
                 {globalError && (
                   <div className='bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-start gap-3'>
