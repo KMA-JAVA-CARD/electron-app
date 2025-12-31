@@ -126,3 +126,21 @@ export interface TransactionResponse {
   transactionId: string;
   pointChange: number;
 }
+
+export interface UserResponse {
+  id: number;
+  fullName: string;
+  phone: string;
+  email: string | null;
+  address: string | null;
+  dob: Date | null;
+  avatarUrl: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  card: {
+    id: number;
+    cardSerial: string;
+    pointBalance: number;
+    status: string;
+  } | null;
+}

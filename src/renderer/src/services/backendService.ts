@@ -8,6 +8,7 @@ import {
   UpdateMemberRequest,
   TransactionRequest,
   TransactionResponse,
+  UserResponse,
 } from '../types/api';
 
 export const backendService = {
@@ -82,6 +83,11 @@ export const backendService = {
       `/cards/${cardSerial}/transaction`,
       data,
     );
+    return response.data;
+  },
+
+  getUsers: async (): Promise<UserResponse[]> => {
+    const response = await nestClient.get<UserResponse[]>('/cards/users');
     return response.data;
   },
 };
