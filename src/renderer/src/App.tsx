@@ -2,12 +2,10 @@ import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { MainLayout } from './layouts/MainLayout';
 import { POSPage } from './pages/POSPage';
 import { MembersPage } from './pages/MembersPage';
-
+import { TransactionsPage } from './pages/TransactionsPage';
 import { Dashboard } from './pages/Dashboard';
 
 // Placeholder pages
-// const Dashboard = () => <div className='p-8 text-2xl font-bold'>Dashboard (Coming Soon)</div>;
-const Transactions = () => <div className='p-8 text-2xl font-bold'>Transactions (Coming Soon)</div>;
 const Settings = () => <div className='p-8 text-2xl font-bold'>Settings (Coming Soon)</div>;
 
 function App(): React.JSX.Element {
@@ -19,7 +17,7 @@ function App(): React.JSX.Element {
           <Route path='/dashboard' element={<Dashboard />} />
           <Route path='/pos' element={<POSPage />} />
           <Route path='/members' element={<MembersPage />} />
-          <Route path='/transactions' element={<Transactions />} />
+          <Route path='/transactions' element={<TransactionsPage />} />
           <Route path='/settings' element={<Settings />} />
         </Route>
       </Routes>

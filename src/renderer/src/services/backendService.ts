@@ -9,6 +9,8 @@ import {
   TransactionRequest,
   TransactionResponse,
   UserResponse,
+  GetTransactionsParams,
+  GetTransactionsResponse,
 } from '../types/api';
 
 export const backendService = {
@@ -88,6 +90,13 @@ export const backendService = {
 
   getUsers: async (): Promise<UserResponse[]> => {
     const response = await nestClient.get<UserResponse[]>('/cards/users');
+    return response.data;
+  },
+
+  getTransactions: async (params: GetTransactionsParams): Promise<GetTransactionsResponse> => {
+    const response = await nestClient.get<GetTransactionsResponse>('/cards/transactions', {
+      params,
+    });
     return response.data;
   },
 };

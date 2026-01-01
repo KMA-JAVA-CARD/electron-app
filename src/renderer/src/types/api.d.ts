@@ -144,3 +144,32 @@ export interface UserResponse {
     status: string;
   } | null;
 }
+
+export interface GetTransactionsParams {
+  type?: TransactionType;
+  cardSerial?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface Transaction {
+  id: string;
+  type: TransactionType;
+  amount: number;
+  description: string;
+  signature: string;
+  createdAt: Date;
+  cardId: string;
+}
+
+export interface PaginationResponse<T> {
+  data: T[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export interface GetTransactionsResponse extends PaginationResponse<Transaction> {}
