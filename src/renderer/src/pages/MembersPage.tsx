@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { RegistrationModal } from '../components/RegistrationModal';
+import { UserViewModal } from '../components/UserViewModal';
 import { backendService } from '../services/backendService';
 import { UserResponse } from '../types/api';
 import { Popover, PopoverMenuItem, PopoverDivider } from '../components/ui/Popover';
@@ -43,6 +44,8 @@ export const MembersPage = () => {
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserResponse | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -68,18 +71,21 @@ export const MembersPage = () => {
     fetchUsers();
   }, []);
 
-  // Action handlers (UI only for now)
+  // Action handlers
   const handleView = (user: UserResponse) => {
-    console.log('View user:', user);
+    setSelectedUser(user);
+    setIsViewModalOpen(true);
   };
 
-  const handleBlock = (user: UserResponse) => {
-    console.log('Block user:', user);
-  };
+  // TODO: Implement block functionality
+  // const handleBlock = (user: UserResponse) => {
+  //   console.log('Block user:', user);
+  // };
 
-  const handleDelete = (user: UserResponse) => {
-    console.log('Delete user:', user);
-  };
+  // TODO: Implement delete functionality
+  // const handleDelete = (user: UserResponse) => {
+  //   console.log('Delete user:', user);
+  // };
 
   // Table columns
   const columns = useMemo<ColumnDef<UserResponse>[]>(
@@ -196,7 +202,8 @@ export const MembersPage = () => {
               >
                 View Details
               </PopoverMenuItem>
-              <PopoverMenuItem
+              {/* TODO: Implement block and delete functionality */}
+              {/* <PopoverMenuItem
                 icon={<Ban className='w-4 h-4 text-amber-400' />}
                 onClick={() => handleBlock(row.original)}
               >
@@ -209,7 +216,7 @@ export const MembersPage = () => {
                 variant='danger'
               >
                 Delete
-              </PopoverMenuItem>
+              </PopoverMenuItem> */}
             </Popover>
           </div>
         ),
@@ -406,7 +413,17 @@ export const MembersPage = () => {
         )}
       </div>
 
-      <RegistrationModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <RegistrationModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={fetchUsers}
+      />
+
+      <UserViewModal
+        isOpen={isViewModalOpen}
+        onClose={() => setIsViewModalOpen(false)}
+        user={selectedUser}
+      />
     </div>
   );
 };

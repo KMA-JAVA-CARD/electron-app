@@ -41,7 +41,7 @@ export const javaCardService = {
   },
 
   getCardImage: async (pin: string): Promise<GetImageHexResponse> => {
-    const response = await javaClient.get<GetImageHexResponse>('/read-image', { params: { pin } });
+    const response = await javaClient.post<GetImageHexResponse>('/read-image', { pin });
     return response.data;
   },
 

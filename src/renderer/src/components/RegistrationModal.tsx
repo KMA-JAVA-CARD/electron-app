@@ -28,6 +28,7 @@ import { Select } from './ui/Select';
 interface RegistrationModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
 type Step = 'card-setup' | 'details' | 'complete';
@@ -38,14 +39,16 @@ const registrationSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email address'),
-  phone: z.string().min(1, 'Phone number is required'), // Simplified validation
+  phone: z.string().min(1, 'Phone number is required'),
+  address: z.string().min(1, 'Address is required'),
+  dob: z.string().min(1, 'Date of birth is required'),
   tier: z.enum(['Silver', 'Gold', 'Diamond']),
   pin: z.string().length(6, 'PIN must be 6 digits'),
 });
 
 type RegistrationFormData = z.infer<typeof registrationSchema>;
 
-export const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) => {
+export const RegistrationModal = ({ isOpen, onClose, onSuccess }: RegistrationModalProps) => {
   const [step, setStep] = useState<Step>('card-setup');
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('idle');
   const [loadingStep, setLoadingStep] = useState<string | null>(null);
@@ -68,6 +71,8 @@ export const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) =
       lastName: '',
       email: '',
       phone: '',
+      address: '',
+      dob: '',
       tier: 'Silver',
       pin: '123456',
     },
@@ -137,13 +142,12 @@ export const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) =
       setLoadingStep('Initializing Card (Generating Keys)...');
       const { cardId, modulus: publicKey } = await javaCardService.registerCard(data.pin);
 
-      // Step B: Update Card Info
       setLoadingStep('Writing Personal Data to Card...');
       await javaCardService.updateCardInfo({
         pin: data.pin,
         fullName: `${data.firstName} ${data.lastName}`,
-        dob: '2000-01-01',
-        address: 'Hanoi',
+        dob: data.dob,
+        address: data.address,
         phone: data.phone,
       });
 
@@ -153,7 +157,6 @@ export const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) =
       await javaCardService.uploadCardImage({ hexData: hex, pin: data.pin });
 
       // Step D: Backend Registration
-      setLoadingStep('Syncing with Central Database...');
       const registerRequest: RegisterMemberRequest = {
         cardSerial: cardId,
         publicKey: publicKey,
@@ -161,13 +164,14 @@ export const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) =
         phone: data.phone,
         email: data.email,
         avatar: avatarFile,
-        dob: '2000-01-01',
-        address: 'Hanoi',
+        dob: data.dob,
+        address: data.address,
       };
       await backendService.registerMember(registerRequest);
 
       setLoadingStep(null);
       setStep('complete');
+      onSuccess?.();
     } catch (err: any) {
       console.error(err);
       setLoadingStep(null);
@@ -420,17 +424,31 @@ export const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) =
                       error={errors.phone?.message}
                       {...register('phone')}
                     />
-                    <Select
-                      label='Membership Tier'
-                      options={[
-                        { label: 'Silver (Standard)', value: 'Silver' },
-                        { label: 'Gold (VIP)', value: 'Gold' },
-                        { label: 'Diamond (Elite)', value: 'Diamond' },
-                      ]}
-                      error={errors.tier?.message}
-                      {...register('tier')}
+                    <Input
+                      label='Date of Birth'
+                      type='date'
+                      error={errors.dob?.message}
+                      {...register('dob')}
                     />
                   </div>
+
+                  <Input
+                    label='Address'
+                    placeholder='123 Main St, Hanoi'
+                    error={errors.address?.message}
+                    {...register('address')}
+                  />
+
+                  <Select
+                    label='Membership Tier'
+                    options={[
+                      { label: 'Silver (Standard)', value: 'Silver' },
+                      { label: 'Gold (VIP)', value: 'Gold' },
+                      { label: 'Diamond (Elite)', value: 'Diamond' },
+                    ]}
+                    error={errors.tier?.message}
+                    {...register('tier')}
+                  />
                 </motion.div>
               )}
 
