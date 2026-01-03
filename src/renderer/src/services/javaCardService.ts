@@ -36,13 +36,12 @@ export const javaCardService = {
     await javaClient.post('/update-info', data);
   },
 
-  uploadCardImage: async (hexData: string): Promise<void> => {
-    const payload: UploadImageRequest = { hexData };
+  uploadCardImage: async (payload: UploadImageRequest): Promise<void> => {
     await javaClient.post('/upload-image', payload);
   },
 
-  getCardImage: async (): Promise<GetImageHexResponse> => {
-    const response = await javaClient.get<GetImageHexResponse>('/read-image');
+  getCardImage: async (pin: string): Promise<GetImageHexResponse> => {
+    const response = await javaClient.get<GetImageHexResponse>('/read-image', { params: { pin } });
     return response.data;
   },
 

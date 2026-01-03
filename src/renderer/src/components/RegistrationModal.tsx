@@ -150,7 +150,7 @@ export const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) =
       // Step C: Upload Image
       setLoadingStep('Processing & Uploading Avatar to Chip...');
       const { hex } = await processImageForCard(avatarFile);
-      await javaCardService.uploadCardImage(hex);
+      await javaCardService.uploadCardImage({ hexData: hex, pin: data.pin });
 
       // Step D: Backend Registration
       setLoadingStep('Syncing with Central Database...');

@@ -231,7 +231,7 @@ export const Dashboard = () => {
       // Parallel Fetch: Secure Info + Card Image
       const [infoRes, imageRes] = await Promise.all([
         javaCardService.getSecureInfo(authenticatedPin),
-        javaCardService.getCardImage(),
+        javaCardService.getCardImage(authenticatedPin),
       ]);
       setSecureInfo(infoRes);
       setCardImageHex(imageRes.result);

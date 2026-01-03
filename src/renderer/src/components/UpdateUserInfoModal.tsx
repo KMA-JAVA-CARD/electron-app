@@ -209,7 +209,7 @@ export const UpdateUserInfoModal = ({
       // Step 2: Upload avatar to card if provided
       if (avatarFile) {
         const processed = await processImageForCard(avatarFile);
-        await javaCardService.uploadCardImage(processed.hex);
+        await javaCardService.uploadCardImage({ hexData: processed.hex, pin });
       }
 
       // Step 3: Update backend database

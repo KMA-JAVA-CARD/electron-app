@@ -17,6 +17,7 @@ export interface CardIdResponse {
 
 export interface UploadImageRequest {
   hexData: string;
+  pin: string;
 }
 
 export interface GetImageHexResponse {
