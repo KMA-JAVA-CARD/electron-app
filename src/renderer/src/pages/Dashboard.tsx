@@ -21,6 +21,7 @@ import { ChangePinModal } from '../components/ChangePinModal';
 import { MemberCardModal } from '../components/MemberCardModal';
 import { MemberProfileModal } from '../components/MemberProfileModal';
 import { UpdateUserInfoModal } from '../components/UpdateUserInfoModal';
+import { RawDataPreviewModal } from '../components/RawDataPreviewModal';
 import { MemberCardResponse, SecureInfoResponse } from '../types/api';
 
 export const Dashboard = () => {
@@ -35,7 +36,6 @@ export const Dashboard = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authenticatedPin, setAuthenticatedPin] = useState<string | null>(null);
 
-  // Modal States
   const [activeModal, setActiveModal] = useState<
     | 'auth-pin'
     | 'info-pin'
@@ -45,6 +45,7 @@ export const Dashboard = () => {
     | 'profile'
     | 'update-info'
     | 'reset-confirm'
+    | 'raw-data'
     | null
   >(null);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -720,8 +721,31 @@ export const Dashboard = () => {
               <p className='text-sm text-slate-500'>Unblock frozen cards</p>
             </div>
           </button>
+
+          {/* Raw Data Preview Button - For Demo */}
+          <button
+            disabled={!isReaderConnected || !cardId || isEmptyCard}
+            onClick={() => setActiveModal('raw-data')}
+            className='group bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-800 p-8 rounded-3xl border border-slate-700 border-dashed flex flex-col items-center justify-center gap-4 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-amber-500/5 focus:outline-none focus:ring-2 focus:ring-amber-500/50'
+          >
+            <div className='w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center group-hover:bg-amber-500 transition-colors duration-300'>
+              <CreditCard className='w-8 h-8 text-amber-500 group-hover:text-white transition-colors' />
+            </div>
+            <div className='text-center'>
+              <h3 className='text-xl font-bold text-slate-100 mb-1 group-hover:text-amber-400 transition-colors'>
+                Raw Data
+              </h3>
+              <p className='text-sm text-slate-500'>View encrypted card data</p>
+            </div>
+          </button>
         </div>
       </div>
+
+      {/* Raw Data Preview Modal */}
+      <RawDataPreviewModal
+        isOpen={activeModal === 'raw-data'}
+        onClose={() => setActiveModal(null)}
+      />
     </div>
   );
 };

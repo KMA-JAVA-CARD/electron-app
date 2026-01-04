@@ -174,3 +174,8 @@ export interface PaginationResponse<T> {
 }
 
 export interface GetTransactionsResponse extends PaginationResponse<Transaction> {}
+
+export interface GetRawDataResponse {
+  encryptedUserInfo: string;
+  encryptedImage: string;
+}

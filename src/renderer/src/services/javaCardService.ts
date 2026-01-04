@@ -8,6 +8,7 @@ import {
   UploadImageRequest,
   SecureInfoResponse,
   GetImageHexResponse,
+  GetRawDataResponse,
 } from '../types/api';
 
 export const javaCardService = {
@@ -69,6 +70,11 @@ export const javaCardService = {
 
   updatePoints: async (points: number): Promise<{ result: string }> => {
     const response = await javaClient.post<{ result: string }>('/update-points', { points });
+    return response.data;
+  },
+
+  getRawData: async (): Promise<GetRawDataResponse> => {
+    const response = await javaClient.get<GetRawDataResponse>('/get-raw-data');
     return response.data;
   },
 };
