@@ -24,6 +24,13 @@ import { UpdateMemberRequest, MemberCardResponse } from '../types/api';
 import { Input } from './ui/Input';
 import { PinInputModal } from './PinInputModal';
 
+// Avatar URL builder
+const getAvatarUrl = (avatarUrl: string | null): string => {
+  if (!avatarUrl) return '';
+  if (avatarUrl.startsWith('http')) return avatarUrl;
+  return `http://localhost:9000${avatarUrl}`;
+};
+
 interface UpdateUserInfoModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -56,6 +63,7 @@ export const UpdateUserInfoModal = ({
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isFetchingData, setIsFetchingData] = useState(false);
+  const [fetchedAvatarUrl, setFetchedAvatarUrl] = useState<string | null>(null);
 
   // PIN verification states
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
@@ -95,6 +103,8 @@ export const UpdateUserInfoModal = ({
             address: userData.user.address || '',
             dob: userData.user.dob ? new Date(userData.user.dob).toISOString().split('T')[0] : '',
           });
+          // Store avatar URL for display
+          setFetchedAvatarUrl(userData.user.avatarUrl || null);
         } catch (err: any) {
           console.error('Failed to fetch user data:', err);
           setGlobalError('Failed to load user data. Please try again.');
@@ -114,6 +124,7 @@ export const UpdateUserInfoModal = ({
     setGlobalError(null);
     setPendingFormData(null);
     setIsPinModalOpen(false);
+    setFetchedAvatarUrl(null);
     reset();
     onClose();
   };
@@ -332,9 +343,9 @@ export const UpdateUserInfoModal = ({
                             alt='Avatar'
                             className='w-full h-full object-cover'
                           />
-                        ) : currentUserData?.user.avatarUrl ? (
+                        ) : fetchedAvatarUrl ? (
                           <img
-                            src={currentUserData.user.avatarUrl}
+                            src={fetchedAvatarUrl}
                             alt='Current Avatar'
                             className='w-full h-full object-cover'
                           />

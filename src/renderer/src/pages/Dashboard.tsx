@@ -55,6 +55,9 @@ export const Dashboard = () => {
 
   // Temporary Data for Flows
   const [tempOldPin, setTempOldPin] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<
+    'check-info' | 'change-pin' | 'update-info' | 'raw-data' | null
+  >(null);
 
   // Data States
   const [memberData, setMemberData] = useState<MemberCardResponse | null>(null);
@@ -122,14 +125,9 @@ export const Dashboard = () => {
     refreshStatus();
   }, [refreshStatus]);
 
-  // Auto-open PIN Modal when valid card is detected
-  useEffect(() => {
-    if (cardId && !isEmptyCard && !isBlockedCard && !isAuthenticated) {
-      setActiveModal('auth-pin');
-      setModalError(null);
-      setRemainingAttempts(null);
-    }
-  }, [cardId, isEmptyCard, isBlockedCard, isAuthenticated]);
+  // NOTE: Removed auto-open PIN modal - users now authenticate when clicking actions that require it
+  // The PIN modal will open when user clicks Check Info, Change PIN, Update Info, or Raw Data buttons
+  // Reset PIN can be used without authentication
 
   // Clear authentication when card changes or is removed
   useEffect(() => {
@@ -176,7 +174,7 @@ export const Dashboard = () => {
     }
   };
 
-  // 0. Initial Authentication (Auto-triggered on card detection)
+  // 0. Authentication Handler (triggered when user clicks action buttons)
   const handleAuthenticatePin = async (pin: string) => {
     setIsLoading(true);
     setModalError(null);
@@ -200,6 +198,30 @@ export const Dashboard = () => {
         setIsAuthenticated(true);
         setAuthenticatedPin(pin);
         setActiveModal(null);
+
+        // Execute pending action if any
+        if (pendingAction) {
+          const action = pendingAction;
+          setPendingAction(null);
+          // Execute the action in next tick after state updates
+          setTimeout(() => {
+            switch (action) {
+              case 'check-info':
+                handleCheckInfoInternal(pin);
+                break;
+              case 'change-pin':
+                setActiveModal('change-verify-old');
+                setModalError(null);
+                break;
+              case 'update-info':
+                setActiveModal('update-info');
+                break;
+              case 'raw-data':
+                setActiveModal('raw-data');
+                break;
+            }
+          }, 100);
+        }
       } else if (verifyRes.sw === '6983' || verifyRes.remainingTries === 0) {
         setModalError('Card is LOCKED! Please use Reset PIN.');
         setRemainingAttempts(0);
@@ -218,21 +240,15 @@ export const Dashboard = () => {
     }
   };
 
-  // 1. Check Info (No PIN required - uses authenticated PIN)
-  const handleCheckInfo = async () => {
-    if (!authenticatedPin) {
-      alert('Session expired. Please re-authenticate.');
-      setIsAuthenticated(false);
-      return;
-    }
-
+  // Internal Check Info handler (called after PIN auth)
+  const handleCheckInfoInternal = async (pin: string) => {
     setIsLoading(true);
     setCardImageHex(null);
     try {
       // Parallel Fetch: Secure Info + Card Image
       const [infoRes, imageRes] = await Promise.all([
-        javaCardService.getSecureInfo(authenticatedPin),
-        javaCardService.getCardImage(authenticatedPin),
+        javaCardService.getSecureInfo(pin),
+        javaCardService.getCardImage(pin),
       ]);
       setSecureInfo(infoRes);
       setCardImageHex(imageRes.result);
@@ -244,6 +260,20 @@ export const Dashboard = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // 1. Check Info - Public handler for button click
+  const handleCheckInfo = async () => {
+    if (!isAuthenticated || !authenticatedPin) {
+      // Need to authenticate first
+      setPendingAction('check-info');
+      setActiveModal('auth-pin');
+      setModalError(null);
+      setRemainingAttempts(null);
+      return;
+    }
+    // Already authenticated, execute directly
+    handleCheckInfoInternal(authenticatedPin);
   };
 
   // 1b. View Full Details (triggered from MemberCardModal)
@@ -639,7 +669,11 @@ export const Dashboard = () => {
               className='mt-6 px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition border border-slate-700 flex items-center gap-2 disabled:opacity-50'
             >
               <RefreshCw className={clsx('w-4 h-4', isRefreshing && 'animate-spin')} />
-              {isRefreshing ? 'Checking...' : 'Refresh Status'}
+              {isRefreshing
+                ? 'Checking...'
+                : isReaderConnected && !isAuthenticated
+                  ? 'Authenticate'
+                  : 'Refresh Status'}
             </button>
           </div>
 
@@ -656,7 +690,7 @@ export const Dashboard = () => {
           </div>
 
           <button
-            disabled={!isAuthenticated || isBlockedCard}
+            disabled={!isReaderConnected || !cardId || isEmptyCard || isBlockedCard}
             onClick={handleCheckInfo}
             className='group bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-800 p-8 rounded-3xl border border-slate-700 flex flex-col items-center justify-center gap-4 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-emerald-500/5 focus:outline-none focus:ring-2 focus:ring-emerald-500/50'
           >
@@ -672,10 +706,17 @@ export const Dashboard = () => {
           </button>
 
           <button
-            disabled={!isAuthenticated || isBlockedCard}
+            disabled={!isReaderConnected || !cardId || isEmptyCard || isBlockedCard}
             onClick={() => {
-              setActiveModal('change-verify-old');
-              setModalError(null);
+              if (!isAuthenticated) {
+                setPendingAction('change-pin');
+                setActiveModal('auth-pin');
+                setModalError(null);
+                setRemainingAttempts(null);
+              } else {
+                setActiveModal('change-verify-old');
+                setModalError(null);
+              }
             }}
             className='group bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-800 p-8 rounded-3xl border border-slate-700 flex flex-col items-center justify-center gap-4 transition-all hover:scale-[1.02] hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50'
           >
@@ -691,8 +732,17 @@ export const Dashboard = () => {
           </button>
 
           <button
-            disabled={!isAuthenticated || isBlockedCard}
-            onClick={() => setActiveModal('update-info')}
+            disabled={!isReaderConnected || !cardId || isEmptyCard || isBlockedCard}
+            onClick={() => {
+              if (!isAuthenticated) {
+                setPendingAction('update-info');
+                setActiveModal('auth-pin');
+                setModalError(null);
+                setRemainingAttempts(null);
+              } else {
+                setActiveModal('update-info');
+              }
+            }}
             className='group bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-800 p-8 rounded-3xl border border-slate-700 flex flex-col items-center justify-center gap-4 transition-all hover:scale-[1.02] hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50'
           >
             <div className='w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center group-hover:bg-purple-500 transition-colors duration-300'>
